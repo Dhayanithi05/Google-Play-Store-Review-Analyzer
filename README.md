@@ -52,9 +52,6 @@ Enter the Google Play App URL or App ID: https://play.google.com/store/apps/deta
 - **ReportLab** - Generates PDF reports
 - **Matplotlib** - Creates sentiment pie charts
 
-## License
-This project is licensed under the MIT License.
-
 ## Contributing
 Feel free to submit pull requests or open issues for suggestions and improvements!
 
