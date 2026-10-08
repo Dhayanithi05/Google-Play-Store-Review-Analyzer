@@ -1,10 +1,10 @@
+from functools import lru_cache
 from google_play_scraper import reviews, Sort
 from textblob import TextBlob
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
-import matplotlib.pyplot as plt
 import os
 
 def fetch_reviews(app_id, num_reviews=100):
@@ -18,6 +18,8 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+# Bolt Optimization: Cache sentiment analysis results for repeated/frequent review texts.
+@lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
     """Analyze sentiment of a review using TextBlob."""
     analysis = TextBlob(review_text)
@@ -40,13 +42,19 @@ def categorize_reviews(reviews_data):
 
 def create_pie_chart(sentiment_counts, filename="sentiment_chart.png"):
     """Generate a pie chart of sentiment distribution."""
+    # Bolt Optimization: Lazy-load matplotlib and force non-GUI Agg backend
+    # to avoid heavy startup import overhead (~0.5s) when module is loaded.
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
     labels = sentiment_counts.keys()
     sizes = sentiment_counts.values()
-    colors = ['green', 'grey', 'red']
+    colors_list = ['green', 'grey', 'red']
     explode = (0.1, 0, 0)  # Emphasize positive sentiment
 
     plt.figure(figsize=(6, 6))
-    plt.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors, startangle=140, explode=explode, shadow=True)
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors_list, startangle=140, explode=explode, shadow=True)
     plt.title("Sentiment Distribution")
     plt.savefig(filename)
     plt.close()
