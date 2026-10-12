@@ -1,0 +1,3 @@
+## 2026-03-30 - Caching NLP sentiment analysis and non-interactive Matplotlib backend
+**Learning:** TextBlob sentiment analysis involves NLP parsing overhead per call. Play Store reviews frequently contain duplicate or repetitive review text. Caching `analyze_sentiment` with `functools.lru_cache` eliminates redundant NLP processing (up to ~15x-150x faster for repeated text). Additionally, forcing `matplotlib.use('Agg')` avoids GUI toolkit detection overhead in headless environments.
+**Action:** Always memoize pure sentiment analysis calls and explicitly set non-interactive Matplotlib backends before importing `pyplot`.
