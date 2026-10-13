@@ -4,8 +4,14 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
-import matplotlib.pyplot as plt
+from functools import lru_cache
 import os
+
+# Bolt Optimization: Set non-interactive 'Agg' backend before importing pyplot
+# to eliminate GUI backend lookup overhead when running in non-GUI or headless environments.
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 def fetch_reviews(app_id, num_reviews=100):
     """Fetch reviews from Google Play Store."""
@@ -18,6 +24,9 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+# Bolt Optimization: Memoize sentiment polarity calculation to eliminate
+# redundant TextBlob NLP parsing overhead for duplicate or repetitive review texts.
+@lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
     """Analyze sentiment of a review using TextBlob."""
     analysis = TextBlob(review_text)
