@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+*_review_report.pdf
+*.png
