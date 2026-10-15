@@ -1,3 +1,4 @@
+import functools
 from google_play_scraper import reviews, Sort
 from textblob import TextBlob
 from reportlab.lib.pagesizes import letter
@@ -18,8 +19,13 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+@functools.lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
-    """Analyze sentiment of a review using TextBlob."""
+    """Analyze sentiment of a review using TextBlob.
+
+    Memoized with lru_cache to eliminate redundant NLP parsing for duplicate
+    or identical review strings.
+    """
     analysis = TextBlob(review_text)
     return analysis.sentiment.polarity
 
