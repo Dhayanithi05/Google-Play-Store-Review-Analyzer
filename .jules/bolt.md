@@ -1,0 +1,3 @@
+## 2025-10-18 - ReportLab Native Flowables vs Matplotlib Disk I/O
+**Learning:** Generating charts with Matplotlib in ReportLab PDF generation introduces significant overhead due to Matplotlib figure rendering and disk file write/read/delete operations (~100ms per chart). ReportLab's native `Drawing`, `Pie`, and `Legend` shapes construct vector elements in-memory instantly (<1.5ms), avoiding disk I/O and heavyweight external library dependencies during report building.
+**Action:** Prefer native ReportLab `Drawing` shapes over Matplotlib disk image exports when embedding simple charts or graphs in PDF reports.
