@@ -1,11 +1,13 @@
-from google_play_scraper import reviews, Sort
-from textblob import TextBlob
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-import matplotlib.pyplot as plt
+from functools import lru_cache
 import os
+from google_play_scraper import Sort, reviews
+import matplotlib.pyplot as plt
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from textblob import TextBlob
+
 
 def fetch_reviews(app_id, num_reviews=100):
     """Fetch reviews from Google Play Store."""
@@ -18,10 +20,17 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+
+@lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
-    """Analyze sentiment of a review using TextBlob."""
+    """Analyze sentiment of a review using TextBlob.
+
+    Performance optimization: Cached with lru_cache to eliminate duplicate NLP evaluations
+    when identical review strings are analyzed across runs or within large datasets.
+    """
     analysis = TextBlob(review_text)
     return analysis.sentiment.polarity
+
 
 def categorize_reviews(reviews_data):
     """Categorize reviews based on sentiment."""
@@ -38,6 +47,7 @@ def categorize_reviews(reviews_data):
 
     return categorized
 
+
 def create_pie_chart(sentiment_counts, filename="sentiment_chart.png"):
     """Generate a pie chart of sentiment distribution."""
     labels = sentiment_counts.keys()
@@ -51,11 +61,13 @@ def create_pie_chart(sentiment_counts, filename="sentiment_chart.png"):
     plt.savefig(filename)
     plt.close()
 
+
 def generate_report(app_id, reviews_data):
     """Generate a structured PDF report with extracted reviews and analysis."""
     filename = f"{app_id}_review_report.pdf"
     doc = SimpleDocTemplate(filename, pagesize=letter)
     styles = getSampleStyleSheet()
+    style_body = styles['BodyText']
     elements = []
 
     # Title
@@ -94,23 +106,25 @@ def generate_report(app_id, reviews_data):
     elements.append(Spacer(1, 12))
 
     # Detailed Reviews by Category
+    # Performance optimization: Reuse TableStyle and style lookup, use list comprehensions
+    review_table_style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ])
+
     for sentiment, review_list in categorized_reviews.items():
         elements.append(Paragraph(f"{sentiment} Reviews:", styles['Heading2']))
         elements.append(Spacer(1, 6))
 
-        data = [["Review"]]
-        for review in review_list:
-            data.append([Paragraph(review, styles['BodyText'])])
+        # Build table data using list comprehension instead of repeated append calls
+        data = [["Review"]] + [[Paragraph(review, style_body)] for review in review_list]
 
         table = Table(data, colWidths=[500])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]))
+        table.setStyle(review_table_style)
         elements.append(table)
         elements.append(Spacer(1, 12))
 
@@ -126,17 +140,20 @@ def generate_report(app_id, reviews_data):
     if os.path.exists(chart_filename):
         os.remove(chart_filename)
 
+
 def extract_app_id(url):
     """Extracts the app ID from a Google Play Store URL."""
     if "id=" in url:
         return url.split("id=")[1].split("&")[0]
     return url
 
+
 def main():
     app_url = input("Enter the Google Play App URL or App ID: ")
     app_id = extract_app_id(app_url)
     reviews_data = fetch_reviews(app_id)
     generate_report(app_id, reviews_data)
+
 
 if __name__ == "__main__":
     main()
