@@ -1,3 +1,4 @@
+from functools import lru_cache
 from google_play_scraper import reviews, Sort
 from textblob import TextBlob
 from reportlab.lib.pagesizes import letter
@@ -18,6 +19,10 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+# Optimization: Cache sentiment analysis results for duplicate review texts using lru_cache.
+# Google Play Store reviews frequently contain repeated phrases (e.g. "Great app", "Good", "Love it").
+# Caching sentiment scores avoids redundant TextBlob NLP calculations, improving throughput significantly.
+@lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
     """Analyze sentiment of a review using TextBlob."""
     analysis = TextBlob(review_text)
