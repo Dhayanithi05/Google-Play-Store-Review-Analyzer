@@ -1,3 +1,4 @@
+from functools import lru_cache
 from google_play_scraper import reviews, Sort
 from textblob import TextBlob
 from reportlab.lib.pagesizes import letter
@@ -18,6 +19,9 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+# Cache sentiment analysis scores for up to 1024 unique review texts to avoid
+# repeated expensive TextBlob parsing and NLP processing on identical strings.
+@lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
     """Analyze sentiment of a review using TextBlob."""
     analysis = TextBlob(review_text)
