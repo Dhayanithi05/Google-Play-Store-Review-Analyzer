@@ -1,3 +1,4 @@
+import functools
 from google_play_scraper import reviews, Sort
 from textblob import TextBlob
 from reportlab.lib.pagesizes import letter
@@ -18,6 +19,11 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+# Cache sentiment analysis results for up to 1024 unique review texts.
+# TextBlob sentiment analysis involves tokenization, POS tagging, and lexicon lookups
+# which is computationally expensive (~0.4ms per string). Caching duplicate review strings
+# or repeated analyses avoids re-tokenization, speeding up analysis dramatically.
+@functools.lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
     """Analyze sentiment of a review using TextBlob."""
     analysis = TextBlob(review_text)
