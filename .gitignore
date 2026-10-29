@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+*.pdf
+sentiment_chart.png
