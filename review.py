@@ -6,6 +6,7 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 import matplotlib.pyplot as plt
 import os
+from functools import lru_cache
 
 def fetch_reviews(app_id, num_reviews=100):
     """Fetch reviews from Google Play Store."""
@@ -18,6 +19,9 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+# Cache sentiment analysis results to avoid redundant TextBlob calculations
+# for identical or duplicate review strings.
+@lru_cache(maxsize=1024)
 def analyze_sentiment(review_text):
     """Analyze sentiment of a review using TextBlob."""
     analysis = TextBlob(review_text)
