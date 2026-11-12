@@ -1,11 +1,20 @@
-from google_play_scraper import reviews, Sort
-from textblob import TextBlob
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
+import io
+
 import matplotlib.pyplot as plt
-import os
+from google_play_scraper import Sort, reviews
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import (
+    Image,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+from textblob import TextBlob
+
 
 def fetch_reviews(app_id, num_reviews=100):
     """Fetch reviews from Google Play Store."""
@@ -18,10 +27,12 @@ def fetch_reviews(app_id, num_reviews=100):
     )
     return result
 
+
 def analyze_sentiment(review_text):
     """Analyze sentiment of a review using TextBlob."""
     analysis = TextBlob(review_text)
     return analysis.sentiment.polarity
+
 
 def categorize_reviews(reviews_data):
     """Categorize reviews based on sentiment."""
@@ -38,18 +49,38 @@ def categorize_reviews(reviews_data):
 
     return categorized
 
-def create_pie_chart(sentiment_counts, filename="sentiment_chart.png"):
-    """Generate a pie chart of sentiment distribution."""
+
+def create_pie_chart(sentiment_counts, target=None):
+    """Generate a pie chart of sentiment distribution.
+
+    Performance optimization: saves directly to an in-memory BytesIO buffer
+    when target is None or a buffer, eliminating disk write/read and cleanup overhead.
+    """
     labels = sentiment_counts.keys()
     sizes = sentiment_counts.values()
-    colors = ['green', 'grey', 'red']
+    colors_list = ['green', 'grey', 'red']
     explode = (0.1, 0, 0)  # Emphasize positive sentiment
 
-    plt.figure(figsize=(6, 6))
-    plt.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors, startangle=140, explode=explode, shadow=True)
-    plt.title("Sentiment Distribution")
-    plt.savefig(filename)
-    plt.close()
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors_list, startangle=140, explode=explode, shadow=True)
+    ax.set_title("Sentiment Distribution")
+
+    # If no target specified, render into an in-memory BytesIO buffer
+    return_buffer = False
+    if target is None:
+        target = io.BytesIO()
+        return_buffer = True
+
+    fig.savefig(target, format='png')
+    plt.close(fig)
+
+    if return_buffer:
+        target.seek(0)
+        return target
+    elif hasattr(target, 'seek'):
+        target.seek(0)
+    return target
+
 
 def generate_report(app_id, reviews_data):
     """Generate a structured PDF report with extracted reviews and analysis."""
@@ -67,10 +98,9 @@ def generate_report(app_id, reviews_data):
     sentiment_counts = {key: len(value) for key, value in categorized_reviews.items()}
     total_reviews = sum(sentiment_counts.values())
 
-    # Generate and add pie chart
-    chart_filename = "sentiment_chart.png"
-    create_pie_chart(sentiment_counts, chart_filename)
-    elements.append(Image(chart_filename, width=400, height=300))
+    # Generate and add pie chart in-memory (bypasses disk I/O)
+    chart_buffer = create_pie_chart(sentiment_counts)
+    elements.append(Image(chart_buffer, width=400, height=300))
     elements.append(Spacer(1, 12))
 
     # Summary Section
@@ -122,9 +152,6 @@ def generate_report(app_id, reviews_data):
     doc.build(elements)
     print(f"Report saved as {filename}")
 
-    # Cleanup chart file
-    if os.path.exists(chart_filename):
-        os.remove(chart_filename)
 
 def extract_app_id(url):
     """Extracts the app ID from a Google Play Store URL."""
@@ -132,11 +159,13 @@ def extract_app_id(url):
         return url.split("id=")[1].split("&")[0]
     return url
 
+
 def main():
     app_url = input("Enter the Google Play App URL or App ID: ")
     app_id = extract_app_id(app_url)
     reviews_data = fetch_reviews(app_id)
     generate_report(app_id, reviews_data)
+
 
 if __name__ == "__main__":
     main()
